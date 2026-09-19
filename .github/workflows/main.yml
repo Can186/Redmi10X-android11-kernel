@@ -50,6 +50,8 @@ jobs:
         run: |
           CONN_MK="drivers/misc/mediatek/connectivity/Makefile"
           cp "$CONN_MK" "${CONN_MK}.bak"
+
+          # 1. 基础替换（WLAN 部分）
           sed -i 's|\bunlink\b|rm -rf|g' "$CONN_MK"
           sed -i 's|\bln -s\b|ln -snf|g' "$CONN_MK"
           sed -i 's|\$(srctree)/\.\./|\$(srctree)/|g' "$CONN_MK"
@@ -57,30 +59,53 @@ jobs:
           sed -i 's|ABS_PATH_TO_WLAN_CHR_DRV[[:space:]]*=[[:space:]]*\$(srctree)/\$(PATH_TO_WLAN_CHR_DRV)|ABS_PATH_TO_WLAN_CHR_DRV  = \$(abspath \$(srctree)/\$(PATH_TO_WLAN_CHR_DRV))|' "$CONN_MK"
           sed -i 's|ABS_PATH_TO_WLAN_DRV[[:space:]]*=[[:space:]]*\$(srctree)/\$(PATH_TO_WLAN_DRV)|ABS_PATH_TO_WLAN_DRV      = \$(abspath \$(srctree)/\$(PATH_TO_WLAN_DRV))|' "$CONN_MK"
 
+          # 2. 用 Python 处理 BT/GPS/FM built-in 块，把注释取消，并把缩进统一成 Tab
           python3 << 'PYEOF'
+          import re
+
           path = "drivers/misc/mediatek/connectivity/Makefile"
           with open(path) as f:
-              lines = f.readlines()
-          in_bt = False
-          out = []
-          for line in lines:
-              if 'For BT built-in mode start @{' in line and line.strip().startswith('#'):
-                  in_bt = True
-                  out.append(line.replace('# For BT built-in mode start @{', 'For BT built-in mode start @{', 1))
-                  continue
-              if '# @} For BT built-in mode end' in line:
-                  in_bt = False
+              content = f.read()
+
+          def fix_block(match):
+              block = match.group(0)
+              lines = block.split('\n')
+              out = []
+              for line in lines:
+                  # 去掉行首 "# " 或 "#" + 多空格
+                  m = re.match(r'^#[[:space:]]?(.*)$', line)
+                  if m:
+                      line = m.group(1)
+                  # 把行首 4+ 空格转成 Tab
+                  m2 = re.match(r'^( {4,})(\S.*)$', line)
+                  if m2:
+                      line = '\t' + m2.group(2)
                   out.append(line)
-                  continue
-              if in_bt and line.startswith('# '):
-                  out.append(line[2:])
-              else:
-                  out.append(line)
+              return '\n'.join(out)
+
+          # 匹配 # For BT built-in mode start @{ ... # @} For BT built-in mode end
+          content = re.sub(
+              r'#\s*For BT built-in mode start @\{.*?#\s*@\}\s*For BT built-in mode end',
+              fix_block, content, flags=re.DOTALL)
+          # 匹配 # For GPS built-in mode start @{ ... # @} For GPS built-in mode end
+          content = re.sub(
+              r'#\s*For GPS built-in mode start @\{.*?#\s*@\}\s*For GPS built-in mode end',
+              fix_block, content, flags=re.DOTALL)
+          # FM 同理
+          content = re.sub(
+              r'#\s*For FM built-in mode start @\{.*?#\s*@\}\s*For FM built-in mode end',
+              fix_block, content, flags=re.DOTALL)
+
           with open(path, 'w') as f:
-              f.writelines(out)
+              f.write(content)
+          print("=== BT/GPS/FM built-in 块已处理 ===")
           PYEOF
 
-          grep -n -E "ABS_PATH_TO_(WMT|WLAN)|PATH_TO_(WMT|WLAN)" "$CONN_MK" | head -10
+          # 3. 验证
+          echo "=== BT built-in 段 ==="
+          grep -A 15 "For BT built-in mode start" "$CONN_MK" | head -20 | cat -A
+          echo "=== GPS built-in 段 ==="
+          grep -A 10 "For GPS built-in mode start" "$CONN_MK" | head -15 | cat -A
 
       - name: 修改驱动 Makefile 的 TOP
         run: |
@@ -139,6 +164,8 @@ jobs:
           scripts/config --file out/.config \
             --disable CONFIG_CC_STACKPROTECTOR_STRONG \
             --disable LTO_CLANG \
+            --enable CONFIG_KALLSYMS \
+            --enable CONFIG_KALLSYMS_ALL \
             --enable CONFIG_WLAN_DRV_BUILD_IN \
             --enable CONFIG_MTK_COMBO_WIFI \
             --enable CONFIG_MTK_COMBO_BT \
