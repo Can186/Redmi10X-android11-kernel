@@ -167,7 +167,7 @@ jobs:
           fi
           grep -n "stpcpy" lib/string.c | head -5
 
-      - name: 集成 KernelSU Next v1.1.0
+      - name: 集成 KernelSU Next v1.0.9
         run: |
           curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s v1.0.9
           echo "=== KernelSU-Next 目录 ==="
