@@ -148,6 +148,19 @@ jobs:
           echo "=== 验证 ==="
           ls -la drivers/input/touchscreen/focaltech_touch/include/firmware/
           ls -la drivers/input/touchscreen/focaltech_touch/include/pramboot/
+
+      - name: 修复 scp_wdt_reset 未声明
+        run: |
+          F="drivers/misc/mediatek/scp/mt6873/scp_helper.h"
+          if [ -f "$F" ]; then
+            echo "=== SCP_RECOVERY_SUPPORT 上下文 ==="
+            grep -n -B1 -A5 "SCP_RECOVERY_SUPPORT" "$F" | head -20
+            if ! grep -q "void scp_wdt_reset" "$F"; then
+              sed -i '/#if SCP_RECOVERY_SUPPORT/a void scp_wdt_reset(int cpu_id);' "$F"
+            fi
+            echo "=== 修改后 ==="
+            grep -n -B1 -A8 "SCP_RECOVERY_SUPPORT" "$F" | head -25
+          fi
       
       - name: 编译内核
         run: |
