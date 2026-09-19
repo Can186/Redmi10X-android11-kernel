@@ -1,7 +1,5 @@
 name: Build Redmi 10X 5G A11 Kernel
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -185,6 +183,24 @@ jobs:
           ls -la fs/susfs.c 2>/dev/null || echo "fs/susfs.c 不存在"
           ls -la include/linux/susfs.h 2>/dev/null || echo "include/linux/susfs.h 不存在"
           ls -la include/linux/susfs_def.h 2>/dev/null || echo "include/linux/susfs_def.h 不存在"
+
+      - name: 修复 task_mmu.c 缺 susfs_def.h
+        run: |
+          F="fs/proc/task_mmu.c"
+          if [ -f "$F" ]; then
+            echo "=== 1. 插入 susfs_def.h include ==="
+            if ! grep -q "susfs_def.h" "$F"; then
+              LAST_INC=$(grep -n '^#include' "$F" | tail -1 | cut -d: -f1)
+              echo "  最后一个 #include 在第 $LAST_INC 行"
+              sed -i "${LAST_INC}a #include <linux/susfs_def.h>" "$F"
+            fi
+            grep -n "susfs_def.h" "$F"
+
+            echo "=== 2. 修复 smap_gather_stats 的 return 0 ==="
+            sed -i '/static void smap_gather_stats/,/^}/{s/return 0;/return;/}' "$F"
+            grep -n "smap_gather_stats" "$F" | head -5
+            sed -n '/static void smap_gather_stats/,/^}/p' "$F" | head -30
+          fi
       
       - name: 编译内核
         run: |
