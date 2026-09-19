@@ -216,7 +216,7 @@ jobs:
       - name: 上传编译产物
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel_Redmi10X5G_A11
+          name: KernelSU 0.9.5
           path: |
             out/arch/arm64/boot/Image
             out/arch/arm64/boot/dts/mediatek/mt6873.dtb
