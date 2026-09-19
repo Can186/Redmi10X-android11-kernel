@@ -102,6 +102,17 @@ jobs:
           sed -i 's/static void __exit gps_emi_mod_exit/static void gps_emi_mod_exit/' vendor/mediatek/kernel_modules/connectivity/gps/gps_emi.c
           sed -i 's/static void __exit gps_fw_log_exit/static void gps_fw_log_exit/' vendor/mediatek/kernel_modules/connectivity/gps/fw_log_gps.c
 
+      - name: 修复 cmdq_handle 指针强转
+        run: |
+          F="drivers/gpu/drm/mediatek/mtk_drm_crtc.c"
+          if [ -f "$F" ]; then
+            echo "=== 原始 ==="
+            grep -n "unsigned int)\*cmdq_handle" "$F"
+            sed -i 's/(unsigned int)\*cmdq_handle/(unsigned long)*cmdq_handle/g' "$F"
+            echo "=== 修改后 ==="
+            grep -n "cmdq_handle" "$F" | head -5
+          fi
+      
       - name: 编译内核
         run: |
           export PATH="/opt/clang12/bin:/opt/gcc-arm64/bin:/opt/gcc-arm32/bin:$PATH"
