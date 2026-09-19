@@ -112,6 +112,17 @@ jobs:
             echo "=== 修改后 ==="
             grep -n "cmdq_handle" "$F" | head -5
           fi
+
+      - name: 修复触摸屏固件缺失
+        run: |
+          mkdir -p drivers/input/touchscreen/focaltech_touch/include/firmware
+          mkdir -p drivers/input/touchscreen/focaltech_touch/include/pramboot
+          touch drivers/input/touchscreen/focaltech_touch/include/firmware/fw_ft3518_j7.i
+          touch drivers/input/touchscreen/focaltech_touch/include/firmware/fw_sample.i
+          touch drivers/input/touchscreen/focaltech_touch/include/pramboot/FT8719_Pramboot_V0.5_20171221.i
+          echo "=== 验证 ==="
+          ls -la drivers/input/touchscreen/focaltech_touch/include/firmware/
+          ls -la drivers/input/touchscreen/focaltech_touch/include/pramboot/
       
       - name: 编译内核
         run: |
