@@ -169,7 +169,7 @@ jobs:
 
       - name: 集成 KernelSU Next v1.1.0
         run: |
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s v1.1.0
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s v1.0.9
           echo "=== KernelSU-Next 目录 ==="
           ls -la KernelSU-Next/ 2>/dev/null || ls -la KernelSU/ 2>/dev/null || true
           echo "=== Kconfig 里的 config 名 ==="
@@ -229,7 +229,7 @@ jobs:
       - name: 上传编译产物
         uses: actions/upload-artifact@v4
         with:
-          name: KernelSU Next 1.1.0
+          name: KernelSU Next 1.0.9
           path: |
             out/arch/arm64/boot/Image
             out/arch/arm64/boot/dts/mediatek/mt6873.dtb
