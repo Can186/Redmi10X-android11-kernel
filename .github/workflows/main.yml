@@ -169,13 +169,28 @@ jobs:
           fi
           grep -n "stpcpy" lib/string.c | head -5
 
-      - name: 集成 KernelSU Next v1.1.1
+      - name: 集成 KernelSU Next v1.1.0
         run: |
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s v1.1.1
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s v1.1.0
           echo "=== KernelSU-Next 目录 ==="
           ls -la KernelSU-Next/ 2>/dev/null || ls -la KernelSU/ 2>/dev/null || true
           echo "=== Kconfig 里的 config 名 ==="
           grep -rn "config KSU" KernelSU-Next/Kconfig 2>/dev/null | head -20 || true
+      
+      - name: 修复 KSU Next 的 seccomp.filter_count
+        run: |
+          F="KernelSU-Next/kernel/core_hook.c"
+          if [ -f "$F" ]; then
+            echo "=== 原始 ==="
+            sed -n '128,140p' "$F"
+            # 注释掉 filter_count 那行
+            sed -i 's|^\(\s*\)atomic_set(&current->seccomp\.filter_count, 0);|\1/* Removed by patch: no filter_count in 4.14 */|' "$F"
+            echo "=== 修改后 ==="
+            sed -n '128,140p' "$F"
+          else
+            echo "找不到 $F"
+            find . -name "core_hook.c" -path "*kernelsu*" 2>/dev/null
+          fi
       
       - name: 编译内核
         run: |
@@ -216,7 +231,7 @@ jobs:
       - name: 上传编译产物
         uses: actions/upload-artifact@v4
         with:
-          name: KernelSU Next 1.1.1
+          name: KernelSU Next 1.1.0
           path: |
             out/arch/arm64/boot/Image
             out/arch/arm64/boot/dts/mediatek/mt6873.dtb
