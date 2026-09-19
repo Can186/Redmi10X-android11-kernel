@@ -200,7 +200,7 @@ jobs:
             --enable CONFIG_KPROBES \
             --enable CONFIG_KPROBE_EVENTS \
             --enable CONFIG_KALLSYMS \
-            --enable CONFIG_KALLSYMS_ALL
+            --enable CONFIG_KALLSYMS_ALL \
             --set-str CONFIG_MTK_COMBO_CHIP CONSYS_6873
 
           make -j$(nproc) ARCH=arm64 SUBARCH=arm64 CC=clang LD=ld.lld O=out olddefconfig
