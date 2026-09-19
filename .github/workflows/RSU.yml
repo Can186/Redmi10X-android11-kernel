@@ -1,4 +1,4 @@
-name: Build Redmi 10X 5G A11 Kernel
+name: Resukisu
 on:
   workflow_dispatch:
 
