@@ -1,0 +1,142 @@
+name: Build Redmi 10X 5G A11 Kernel
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: 拉取内核源码
+        uses: actions/checkout@v4
+
+      - name: 安装工具链
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list || true
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
+          sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/sources.list || true
+          sudo apt-get update -o Acquire::Retries=3 || true
+          sudo apt-get install -y --no-install-recommends libelf-dev bison flex bc || true
+
+          for pkg in flex bison bc make zip wget git python3; do
+            which $pkg >/dev/null 2>&1 && echo "  $pkg: OK" || echo "  $pkg: MISSING"
+          done
+
+          # Clang 12.0.1（r383902）
+          wget -q https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz
+          tar -xf clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz -C /opt
+          mv /opt/clang+llvm-12.0.1-x86_64-linux-gnu-* /opt/clang12
+
+          wget -q -O arm64.tar.gz https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/+archive/refs/tags/android-12.1.0_r27.tar.gz
+          mkdir -p /opt/gcc-arm64 && tar -xf arm64.tar.gz -C /opt/gcc-arm64
+
+          wget -q -O arm32.tar.gz https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/+archive/refs/tags/android-12.1.0_r27.tar.gz
+          mkdir -p /opt/gcc-arm32 && tar -xf arm32.tar.gz -C /opt/gcc-arm32
+
+          /opt/clang12/bin/clang --version || echo "clang 无法运行"
+          exit 0
+
+      - name: 拉取 MTK 驱动模块
+        run: |
+          mkdir -p vendor/mediatek
+          git clone --depth=1 --branch cezanne-r-oss \
+            https://github.com/MiCode/MTK_kernel_modules.git \
+            vendor/mediatek/kernel_modules
+          ls vendor/mediatek/kernel_modules/connectivity/
+
+      - name: 编辑 connectivity/Makefile
+        run: |
+          CONN_MK="drivers/misc/mediatek/connectivity/Makefile"
+          cp "$CONN_MK" "${CONN_MK}.bak"
+          sed -i 's|\bunlink\b|rm -rf|g' "$CONN_MK"
+          sed -i 's|\bln -s\b|ln -snf|g' "$CONN_MK"
+          sed -i 's|\$(srctree)/\.\./|\$(srctree)/|g' "$CONN_MK"
+          sed -i 's|ABS_PATH_TO_WMT_DRV[[:space:]]*=[[:space:]]*\$(srctree)/\$(PATH_TO_WMT_DRV)|ABS_PATH_TO_WMT_DRV       = \$(abspath \$(srctree)/\$(PATH_TO_WMT_DRV))|' "$CONN_MK"
+          sed -i 's|ABS_PATH_TO_WLAN_CHR_DRV[[:space:]]*=[[:space:]]*\$(srctree)/\$(PATH_TO_WLAN_CHR_DRV)|ABS_PATH_TO_WLAN_CHR_DRV  = \$(abspath \$(srctree)/\$(PATH_TO_WLAN_CHR_DRV))|' "$CONN_MK"
+          sed -i 's|ABS_PATH_TO_WLAN_DRV[[:space:]]*=[[:space:]]*\$(srctree)/\$(PATH_TO_WLAN_DRV)|ABS_PATH_TO_WLAN_DRV      = \$(abspath \$(srctree)/\$(PATH_TO_WLAN_DRV))|' "$CONN_MK"
+
+          python3 << 'PYEOF'
+          path = "drivers/misc/mediatek/connectivity/Makefile"
+          with open(path) as f:
+              lines = f.readlines()
+          in_bt = False
+          out = []
+          for line in lines:
+              if 'For BT built-in mode start @{' in line and line.strip().startswith('#'):
+                  in_bt = True
+                  out.append(line.replace('# For BT built-in mode start @{', 'For BT built-in mode start @{', 1))
+                  continue
+              if '# @} For BT built-in mode end' in line:
+                  in_bt = False
+                  out.append(line)
+                  continue
+              if in_bt and line.startswith('# '):
+                  out.append(line[2:])
+              else:
+                  out.append(line)
+          with open(path, 'w') as f:
+              f.writelines(out)
+          PYEOF
+
+          grep -n -E "ABS_PATH_TO_(WMT|WLAN)|PATH_TO_(WMT|WLAN)" "$CONN_MK" | head -10
+
+      - name: 修改驱动 Makefile 的 TOP
+        run: |
+          for f in \
+            vendor/mediatek/kernel_modules/connectivity/wlan/core/gen4m/Makefile \
+            vendor/mediatek/kernel_modules/connectivity/wlan/adaptor/Makefile \
+            vendor/mediatek/kernel_modules/connectivity/bt/mt66xx/legacy/Makefile \
+            vendor/mediatek/kernel_modules/connectivity/fmradio/Makefile \
+            vendor/mediatek/kernel_modules/connectivity/gps/Makefile; do
+            if [ -f "$f" ]; then
+              sed -i 's|TOP[[:space:]]*:=[[:space:]]*\$(srctree)/\.\.|TOP := $(srctree)/|' "$f"
+            fi
+          done
+
+      - name: 修改 GPS/BT 驱动为内建
+        run: |
+          sed -i 's/^obj-m += \$(MODULE_NAME)\.o/obj-y += $(MODULE_NAME).o/' vendor/mediatek/kernel_modules/connectivity/gps/Makefile
+          sed -i 's/^obj-m += \$(MODULE_NAME)\.o/obj-y += $(MODULE_NAME).o/' vendor/mediatek/kernel_modules/connectivity/bt/mt66xx/legacy/Makefile
+          sed -i 's/static void __exit gps_emi_mod_exit/static void gps_emi_mod_exit/' vendor/mediatek/kernel_modules/connectivity/gps/gps_emi.c
+          sed -i 's/static void __exit gps_fw_log_exit/static void gps_fw_log_exit/' vendor/mediatek/kernel_modules/connectivity/gps/fw_log_gps.c
+
+      - name: 编译内核
+        run: |
+          export PATH="/opt/clang12/bin:/opt/gcc-arm64/bin:/opt/gcc-arm32/bin:$PATH"
+          export ARCH=arm64
+          export SUBARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-androidkernel-
+          export CROSS_COMPILE_ARM32=arm-linux-androideabi-
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+          export KCFLAGS="-Wno-error"
+
+          make -j$(nproc) ARCH=arm64 SUBARCH=arm64 CC=clang LD=ld.lld O=out atom_user_defconfig
+
+          scripts/config --file out/.config \
+            --disable CONFIG_CC_STACKPROTECTOR_STRONG \
+            --disable LTO_CLANG \
+            --enable CONFIG_WLAN_DRV_BUILD_IN \
+            --enable CONFIG_MTK_COMBO_WIFI \
+            --enable CONFIG_MTK_COMBO_BT \
+            --enable CONFIG_MTK_COMBO_GPS \
+            --set-str CONFIG_MTK_COMBO_CHIP CONSYS_6873
+
+          make -j$(nproc) ARCH=arm64 SUBARCH=arm64 CC=clang LD=ld.lld O=out olddefconfig
+
+          grep -E "CONFIG_(LTO_CLANG|CC_STACKPROTECTOR_STRONG|WLAN_DRV_BUILD_IN|MTK_COMBO_WIFI|MTK_COMBO_BT|MTK_COMBO_GPS|MTK_COMBO_CHIP)" out/.config || true
+
+          make -j$(nproc) ARCH=arm64 SUBARCH=arm64 CC=clang LD=ld.lld O=out \
+            CONFIG_WLAN_DRV_BUILD_IN=y 2>&1 | tee build.log
+          exit ${PIPESTATUS[0]}
+
+     
+
+      - name: 上传编译产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kernel_Redmi10X5G_A11
+          path: |
+            out/arch/arm64/boot/Image
+            out/arch/arm64/boot/dts/mediatek/mt6873.dtb
