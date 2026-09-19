@@ -1,7 +1,5 @@
-name: Build Redmi 10X 5G A11 Kernel
+name: Build Redmi10X kernel
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
