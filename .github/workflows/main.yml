@@ -161,6 +161,13 @@ jobs:
             echo "=== 修改后 ==="
             grep -n -B1 -A8 "SCP_RECOVERY_SUPPORT" "$F" | head -25
           fi
+
+      - name: 添加 stpcpy 实现
+        run: |
+          if ! grep -q "char \*stpcpy" lib/string.c; then
+            printf '\n#ifndef __HAVE_ARCH_STPCPY\nchar *stpcpy(char *dest, const char *src)\n{\n\twhile ((*dest = *src) != '\''\\0'\'') {\n\t\tdest++;\n\t\tsrc++;\n\t}\n\treturn dest;\n}\nEXPORT_SYMBOL(stpcpy);\n#endif\n' >> lib/string.c
+          fi
+          grep -n "stpcpy" lib/string.c | head -5
       
       - name: 编译内核
         run: |
