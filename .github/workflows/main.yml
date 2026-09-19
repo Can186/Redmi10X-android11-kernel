@@ -168,6 +168,14 @@ jobs:
             printf '\n#ifndef __HAVE_ARCH_STPCPY\nchar *stpcpy(char *dest, const char *src)\n{\n\twhile ((*dest = *src) != '\''\\0'\'') {\n\t\tdest++;\n\t\tsrc++;\n\t}\n\treturn dest;\n}\nEXPORT_SYMBOL(stpcpy);\n#endif\n' >> lib/string.c
           fi
           grep -n "stpcpy" lib/string.c | head -5
+
+      - name: 集成 KernelSU v0.9.5
+        run: |
+          curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s v0.9.5
+          echo "=== KernelSU 目录 ==="
+          ls -la KernelSU/ 2>/dev/null || true
+          echo "=== Kconfig ==="
+          grep -rn "config KSU" KernelSU/Kconfig 2>/dev/null | head || true
       
       - name: 编译内核
         run: |
@@ -184,12 +192,15 @@ jobs:
           scripts/config --file out/.config \
             --disable CONFIG_CC_STACKPROTECTOR_STRONG \
             --disable LTO_CLANG \
-            --enable CONFIG_KALLSYMS \
-            --enable CONFIG_KALLSYMS_ALL \
             --enable CONFIG_WLAN_DRV_BUILD_IN \
             --enable CONFIG_MTK_COMBO_WIFI \
             --enable CONFIG_MTK_COMBO_BT \
             --enable CONFIG_MTK_COMBO_GPS \
+            --enable CONFIG_KSU \
+            --enable CONFIG_KPROBES \
+            --enable CONFIG_KPROBE_EVENTS \
+            --enable CONFIG_KALLSYMS \
+            --enable CONFIG_KALLSYMS_ALL
             --set-str CONFIG_MTK_COMBO_CHIP CONSYS_6873
 
           make -j$(nproc) ARCH=arm64 SUBARCH=arm64 CC=clang LD=ld.lld O=out olddefconfig
