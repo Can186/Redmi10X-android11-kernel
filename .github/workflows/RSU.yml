@@ -11,30 +11,16 @@ jobs:
 
       - name: 安装工具链
         run: |
-          sudo rm -f /etc/apt/sources.list.d/google-chrome.list || true
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
-          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
-          sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' /etc/apt/sources.list || true
-          sudo apt-get update -o Acquire::Retries=3 || true
-          sudo apt-get install -y --no-install-recommends libelf-dev bison flex bc || true
-
-          for pkg in flex bison bc make zip wget git python3; do
-            which $pkg >/dev/null 2>&1 && echo "  $pkg: OK" || echo "  $pkg: MISSING"
-          done
-
-          # Clang 12.0.1（r383902）
-          wget -q https://github.com/llvm/llvm-project/releases/download/llvmorg-12.0.1/clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz
-          tar -xf clang+llvm-12.0.1-x86_64-linux-gnu-ubuntu-16.04.tar.xz -C /opt
-          mv /opt/clang+llvm-12.0.1-x86_64-linux-gnu-* /opt/clang12
-
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libelf-dev bison flex bc libssl-dev
+          git clone --depth=1 https://github.com/picasso09/clang-11.0.1-r383902.git /opt/clang11
+          ln -sfn /opt/clang11 /opt/clang12
+          /opt/clang11/bin/clang --version
           wget -q -O arm64.tar.gz https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9/+archive/refs/tags/android-12.1.0_r27.tar.gz
           mkdir -p /opt/gcc-arm64 && tar -xf arm64.tar.gz -C /opt/gcc-arm64
-
           wget -q -O arm32.tar.gz https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/+archive/refs/tags/android-12.1.0_r27.tar.gz
           mkdir -p /opt/gcc-arm32 && tar -xf arm32.tar.gz -C /opt/gcc-arm32
-
-          /opt/clang12/bin/clang --version || echo "clang 无法运行"
-          exit 0
 
       - name: 拉取 MTK 驱动模块
         run: |
