@@ -62,9 +62,9 @@ endif
         PATH_TO_WLAN_CHR_DRV = vendor/mediatek/kernel_modules/connectivity/wlan/adaptor
         PATH_TO_WLAN_DRV     = vendor/mediatek/kernel_modules/connectivity/wlan/core/gen4m
 
-        ABS_PATH_TO_WMT_DRV      = $(srctree)/../$(PATH_TO_WMT_DRV)
-        ABS_PATH_TO_WLAN_CHR_DRV = $(srctree)/../$(PATH_TO_WLAN_CHR_DRV)
-        ABS_PATH_TO_WLAN_DRV     = $(srctree)/../$(PATH_TO_WLAN_DRV)
+        ABS_PATH_TO_WMT_DRV      = $(abspath $(srctree)/../$(PATH_TO_WMT_DRV)
+        ABS_PATH_TO_WLAN_CHR_DRV = $(abspath $(srctree)/../$(PATH_TO_WLAN_CHR_DRV)
+        ABS_PATH_TO_WLAN_DRV     = $(abspath $(srctree)/../$(PATH_TO_WLAN_DRV)
 
         # check wlan driver folder
         ifeq (,$(wildcard $(ABS_PATH_TO_WMT_DRV)))
@@ -81,13 +81,13 @@ endif
         $(warning symbolic link to $(PATH_TO_WLAN_CHR_DRV))
         $(warning symbolic link to $(PATH_TO_WLAN_DRV))
 
-        $(shell unlink $(srctree)/$(src)/wmt_drv)
-        $(shell unlink $(srctree)/$(src)/wmt_chrdev_wifi)
-        $(shell unlink $(srctree)/$(src)/wlan_drv_gen4m)
+        $(shell rm -rf  $(srctree)/$(src)/wmt_drv)
+        $(shell rm -rf  $(srctree)/$(src)/wmt_chrdev_wifi)
+        $(shell rm -rf  $(srctree)/$(src)/wlan_drv_gen4m)
 
-        $(shell ln -s $(ABS_PATH_TO_WMT_DRV)      $(srctree)/$(src)/wmt_drv)
-        $(shell ln -s $(ABS_PATH_TO_WLAN_CHR_DRV) $(srctree)/$(src)/wmt_chrdev_wifi)
-        $(shell ln -s $(ABS_PATH_TO_WLAN_DRV)     $(srctree)/$(src)/wlan_drv_gen4m)
+        $(shell ln -snf $(ABS_PATH_TO_WMT_DRV)      $(srctree)/$(src)/wmt_drv)
+        $(shell ln -snf $(ABS_PATH_TO_WLAN_CHR_DRV) $(srctree)/$(src)/wmt_chrdev_wifi)
+        $(shell ln -snf $(ABS_PATH_TO_WLAN_DRV)     $(srctree)/$(src)/wlan_drv_gen4m)
 
         # for gen4m options
         export CONFIG_MTK_COMBO_WIFI_HIF=axi
@@ -118,19 +118,19 @@ endif
         obj-y += wlan_drv_gen4m/
 
         # For BT built-in mode start @{
-        # ifneq (,$(filter $(CONFIG_MTK_COMBO_CHIP), "CONSYS_6885"))
-        #     PATH_TO_BT_DRV       = vendor/mediatek/kernel_modules/connectivity/bt/mt66xx/connac2
-        #     export _MTK_BT_CHIP=MTK_CONSYS_MT6885
-        # else ifneq (,$(filter $(CONFIG_MTK_COMBO_CHIP), "CONSYS_6893"))
-        #     PATH_TO_BT_DRV       = vendor/mediatek/kernel_modules/connectivity/bt/mt66xx/connac2
-        #     export _MTK_BT_CHIP=MTK_CONSYS_MT6893
-        # else
-        #     PATH_TO_BT_DRV       = vendor/mediatek/kernel_modules/connectivity/bt/mt66xx/legacy
-        # endif
-        # ABS_PATH_TO_BT_DRV       = $(srctree)/../$(PATH_TO_BT_DRV)
-        # $(shell unlink $(srctree)/$(src)/bt)
-        # $(shell ln -s $(ABS_PATH_TO_BT_DRV)      $(srctree)/$(src)/bt)
-        # obj-y += bt/
+         ifneq (,$(filter $(CONFIG_MTK_COMBO_CHIP), "CONSYS_6885"))
+             PATH_TO_BT_DRV       = vendor/mediatek/kernel_modules/connectivity/bt/mt66xx/connac2
+             export _MTK_BT_CHIP=MTK_CONSYS_MT6885
+         else ifneq (,$(filter $(CONFIG_MTK_COMBO_CHIP), "CONSYS_6893"))
+             PATH_TO_BT_DRV       = vendor/mediatek/kernel_modules/connectivity/bt/mt66xx/connac2
+             export _MTK_BT_CHIP=MTK_CONSYS_MT6893
+         else
+             PATH_TO_BT_DRV       = vendor/mediatek/kernel_modules/connectivity/bt/mt66xx/legacy
+         endif
+         ABS_PATH_TO_BT_DRV       = $(abspath $(srctree)/$(PATH_TO_BT_DRV)
+         $(shell rm -rf $(srctree)/$(src)/bt)
+         $(shell ln -snf $(ABS_PATH_TO_BT_DRV)      $(srctree)/$(src)/bt)
+         obj-y += bt/
         # @} For BT built-in mode end
 
 
@@ -158,15 +158,15 @@ endif
         # @} For FM built-in mode end
 
         # For GPS built-in mode start @{
-        # PATH_TO_GPS_DRV      = vendor/mediatek/kernel_modules/connectivity/gps
-        # ABS_PATH_TO_GPS_DRV      = $(srctree)/../$(PATH_TO_GPS_DRV)
-        # ifeq (,$(wildcard $(ABS_PATH_TO_GPS_DRV)))
-        #     $(error $(ABS_PATH_TO_GPS_DRV) is not existed)
-        # endif
-        # $(warning symbolic link to $(PATH_TO_GPS_DRV))
-        # $(shell unlink $(srctree)/$(src)/gps_drv)
-        # $(shell ln -s $(ABS_PATH_TO_GPS_DRV)      $(srctree)/$(src)/gps_drv)
-        # obj-y += gps_drv/
+         PATH_TO_GPS_DRV      = vendor/mediatek/kernel_modules/connectivity/gps
+         ABS_PATH_TO_GPS_DRV      = $(abspath $(srctree)/$(PATH_TO_GPS_DRV)
+         ifeq (,$(wildcard $(ABS_PATH_TO_GPS_DRV)))
+             $(error $(ABS_PATH_TO_GPS_DRV) is not existed)
+         endif
+         $(warning symbolic link to $(PATH_TO_GPS_DRV))
+         $(shell rm -rf  $(srctree)/$(src)/gps_drv)
+         $(shell ln -snf $(ABS_PATH_TO_GPS_DRV)      $(srctree)/$(src)/gps_drv)
+         obj-y += gps_drv/
         # @} For GPS built-in mode end
 
     endif
