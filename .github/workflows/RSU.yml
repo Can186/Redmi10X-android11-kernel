@@ -11,6 +11,7 @@ jobs:
       - name: 安装工具链
         run: |
           sudo apt-get update
+          sudo apt install tree
           sudo apt-get install -y --no-install-recommends \
             libelf-dev bison flex bc libssl-dev
           git clone --depth=1 https://github.com/picasso09/clang-11.0.1-r383902.git /opt/clang11
@@ -28,61 +29,8 @@ jobs:
             https://github.com/MiCode/MTK_kernel_modules.git \
             vendor/mediatek/kernel_modules
           ls vendor/mediatek/kernel_modules/connectivity/
-
-      - name: 编辑 connectivity/Makefile
-        run: |
-          CONN_MK="drivers/misc/mediatek/connectivity/Makefile"
-          cp "$CONN_MK" "${CONN_MK}.bak"
-
-          # 1. WLAN 基础替换
-          sed -i 's|\bunlink\b|rm -rf|g' "$CONN_MK"
-          sed -i 's|\bln -s\b|ln -snf|g' "$CONN_MK"
-          sed -i 's|\$(srctree)/\.\./|\$(srctree)/|g' "$CONN_MK"
-          sed -i 's|ABS_PATH_TO_WMT_DRV[[:space:]]*=[[:space:]]*\$(srctree)/\$(PATH_TO_WMT_DRV)|ABS_PATH_TO_WMT_DRV       = \$(abspath \$(srctree)/\$(PATH_TO_WMT_DRV))|' "$CONN_MK"
-          sed -i 's|ABS_PATH_TO_WLAN_CHR_DRV[[:space:]]*=[[:space:]]*\$(srctree)/\$(PATH_TO_WLAN_CHR_DRV)|ABS_PATH_TO_WLAN_CHR_DRV  = \$(abspath \$(srctree)/\$(PATH_TO_WLAN_CHR_DRV))|' "$CONN_MK"
-          sed -i 's|ABS_PATH_TO_WLAN_DRV[[:space:]]*=[[:space:]]*\$(srctree)/\$(PATH_TO_WLAN_DRV)|ABS_PATH_TO_WLAN_DRV      = \$(abspath \$(srctree)/\$(PATH_TO_WLAN_DRV))|' "$CONN_MK"
-
-          # 2. Python 解注释 BT/GPS/FM 块
-          python3 << 'PYEOF'
-          import re
-          path = "drivers/misc/mediatek/connectivity/Makefile"
-          with open(path) as f:
-              content = f.read()
-          def fix_block(match):
-              block = match.group(0)
-              lines = block.split('\n')
-              out = []
-              for line in lines:
-                  m = re.match(r'^#[ ]?(.*)$', line)
-                  if m:
-                      line = m.group(1)
-                  m2 = re.match(r'^( {4,})(\S.*)$', line)
-                  if m2:
-                      line = '\t' + m2.group(2)
-                  out.append(line)
-              return '\n'.join(out)
-          for block_name in ['BT', 'GPS', 'FM']:
-              content = re.sub(
-                  r'#\s*For ' + block_name + r' built-in mode start @\{.*?#\s*@\}\s*For ' + block_name + ' built-in mode end',
-                  fix_block, content, flags=re.DOTALL)
-          with open(path, 'w') as f:
-              f.write(content)
-          print("=== BT/GPS/FM built-in 块已处理 ===")
-          PYEOF
-
-          # 3. 强制写入 BT/GPS 的 obj-y（不依赖解注释是否成功）
-          cat >> "$CONN_MK" << 'EOF'
-
-          # ===== 强制 BT/GPS 内建 =====
-          obj-y += bt/
-          obj-y += gps_drv/
-          EOF
-
-          echo "=== 文件末尾 ==="
-          tail -20 "$CONN_MK"
-
-          echo "=== 文件末尾 ==="
-          tail -20 "$CONN_MK"
+          tree vendor/mediatek/kernel_modules/
+      
 
       - name: 手动创建 WLAN/BT/GPS 软链接
         run: |
