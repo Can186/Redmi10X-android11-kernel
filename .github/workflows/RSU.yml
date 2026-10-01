@@ -142,6 +142,14 @@ jobs:
             grep -n "smap_gather_stats" "$F" | head -5
             sed -n '/static void smap_gather_stats/,/^}/p' "$F" | head -30
           fi
+
+      - name: 打印第 65 行
+        run: |
+          sed -n '65p' drivers/misc/mediatek/connectivity/Makefile | cat -A
+          echo "---"
+          sed -n '66p' drivers/misc/mediatek/connectivity/Makefile | cat -A
+          echo "---"
+          sed -n '67p' drivers/misc/mediatek/connectivity/Makefile | cat -A
       
       - name: 单独调试 connectivity/Makefile
         run: |
