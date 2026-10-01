@@ -143,27 +143,15 @@ jobs:
             sed -n '/static void smap_gather_stats/,/^}/p' "$F" | head -30
           fi
 
-      - name: 打印第 65 行
+      - name: 切换 GPU 驱动为 r21p0
         run: |
-          sed -n '65p' drivers/misc/mediatek/connectivity/Makefile | cat -A
-          echo "---"
-          sed -n '66p' drivers/misc/mediatek/connectivity/Makefile | cat -A
-          echo "---"
-          sed -n '67p' drivers/misc/mediatek/connectivity/Makefile | cat -A
-      
-      - name: 单独调试 connectivity/Makefile
-        run: |
-          export PATH="/opt/clang12/bin:/opt/gcc-arm64/bin:/opt/gcc-arm32/bin:$PATH"
-          export ARCH=arm64 SUBARCH=arm64
-          export CROSS_COMPILE=aarch64-linux-androidkernel-
-          export CROSS_COMPILE_ARM32=arm-linux-androideabi-
-          export CLANG_TRIPLE=aarch64-linux-gnu-
+          echo "=== 修改前 ==="
+          grep -n "MTK_GPU_VERSION" arch/arm64/configs/atom_user_defconfig
 
-          echo "=== 手动执行 connectivity/Makefile ==="
-          make -j$(nproc) -C drivers/misc/mediatek/connectivity M=$PWD/drivers/misc/mediatek/connectivity modules 2>&1 | head -50
+          sed -i 's|CONFIG_MTK_GPU_VERSION="mali valhall r25p0"|CONFIG_MTK_GPU_VERSION="mali valhall r21p0"|' arch/arm64/configs/atom_user_defconfig
 
-          echo "=== 直接展开 abspath 看结果 ==="
-          make -f drivers/misc/mediatek/connectivity/Makefile -p 2>&1 | grep -E "ABS_PATH_TO_WMT_DRV|PATH_TO_WMT_DRV" | head -10
+          echo "=== 修改后 ==="
+          grep -n "MTK_GPU_VERSION" arch/arm64/configs/atom_user_defconfig
       
       - name: 编译内核
         run: |
