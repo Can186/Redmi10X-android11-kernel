@@ -143,6 +143,20 @@ jobs:
             sed -n '/static void smap_gather_stats/,/^}/p' "$F" | head -30
           fi
       
+      - name: 单独调试 connectivity/Makefile
+        run: |
+          export PATH="/opt/clang12/bin:/opt/gcc-arm64/bin:/opt/gcc-arm32/bin:$PATH"
+          export ARCH=arm64 SUBARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-androidkernel-
+          export CROSS_COMPILE_ARM32=arm-linux-androideabi-
+          export CLANG_TRIPLE=aarch64-linux-gnu-
+
+          echo "=== 手动执行 connectivity/Makefile ==="
+          make -j$(nproc) -C drivers/misc/mediatek/connectivity M=$PWD/drivers/misc/mediatek/connectivity modules 2>&1 | head -50
+
+          echo "=== 直接展开 abspath 看结果 ==="
+          make -f drivers/misc/mediatek/connectivity/Makefile -p 2>&1 | grep -E "ABS_PATH_TO_WMT_DRV|PATH_TO_WMT_DRV" | head -10
+      
       - name: 编译内核
         run: |
           export PATH="/opt/clang12/bin:/opt/gcc-arm64/bin:/opt/gcc-arm32/bin:$PATH"
@@ -158,6 +172,11 @@ jobs:
           scripts/config --file out/.config \
             --disable CONFIG_CC_STACKPROTECTOR_STRONG \
             --disable LTO_CLANG \
+            --disable CONFIG_ANDROID_PARANOID_NETWORK \
+            --enable CONFIG_SYSVIPC \
+            --enable CONFIG_IPC_NS \
+            --enable CONFIG_USER_NS \
+            --enable CONFIG_DEVTMPFS \
             --enable CONFIG_WLAN_DRV_BUILD_IN \
             --enable CONFIG_MTK_COMBO_WIFI \
             --enable CONFIG_MTK_COMBO_BT \
