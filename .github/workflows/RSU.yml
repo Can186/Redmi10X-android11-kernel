@@ -1,4 +1,4 @@
-name: Resukisu
+name: BakaSU
 on: workflow_dispatch
 
 jobs:
@@ -111,7 +111,7 @@ jobs:
       - name: 集成 ReSukiSU + SUSFS
         run: |
           echo "=== 1. ReSukiSU setup ==="
-          curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
+          curl -LSs "https://raw.githubusercontent.com/Baka-SU/BakaSU/main/kernel/setup.sh" | bash
           ls -la KernelSU/ | head -20
 
           echo "=== 2. SUSFS inline hook patches ==="
@@ -202,4 +202,5 @@ jobs:
           path: |
             out/arch/arm64/boot/Image
             out/arch/arm64/boot/Image.gz
+            out/arch/arm64/boot/Image.gz-dtb
             out/arch/arm64/boot/dts/mediatek/mt6873.dtb
