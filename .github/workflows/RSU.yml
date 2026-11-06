@@ -143,15 +143,7 @@ jobs:
             sed -n '/static void smap_gather_stats/,/^}/p' "$F" | head -30
           fi
 
-      - name: 切换 GPU 驱动为 r21p0
-        run: |
-          echo "=== 修改前 ==="
-          grep -n "MTK_GPU_VERSION" arch/arm64/configs/atom_user_defconfig
-
-          sed -i 's|CONFIG_MTK_GPU_VERSION="mali valhall r25p0"|CONFIG_MTK_GPU_VERSION="mali valhall r21p0"|' arch/arm64/configs/atom_user_defconfig
-
-          echo "=== 修改后 ==="
-          grep -n "MTK_GPU_VERSION" arch/arm64/configs/atom_user_defconfig
+     
       
       - name: 编译内核
         run: |
@@ -167,7 +159,6 @@ jobs:
 
           scripts/config --file out/.config \
             --disable CONFIG_CC_STACKPROTECTOR_STRONG \
-            --disable LTO_CLANG \
             --disable CONFIG_ANDROID_PARANOID_NETWORK \
             --enable CONFIG_SYSVIPC \
             --enable CONFIG_IPC_NS \
@@ -210,4 +201,5 @@ jobs:
           name: Resukisu
           path: |
             out/arch/arm64/boot/Image
+            out/arch/arm64/boot/Image.gz
             out/arch/arm64/boot/dts/mediatek/mt6873.dtb
